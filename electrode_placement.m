@@ -14,7 +14,7 @@ function [rnge_elec,rnge_gel] = electrode_placement(P,model,elec_radius,gel_heig
 % Output: electrode and gel masks, i.e., mask_elec.nii and mask_gel.nii
 %
 % rnge_elec,rnge_gel: for labelling electrodes later.
-% 
+%
 % See Huang et al 2013 (DOI: 10.1088/1741-2560/10/6/066004) for details.
 %
 % (c) Yu Huang (Andy), May 2017
@@ -26,6 +26,8 @@ function [rnge_elec,rnge_gel] = electrode_placement(P,model,elec_radius,gel_heig
 
 if nargin < 3 || isempty(elec_radius)
     elec_radius = 6; % default electrode radius
+    %elec_radius = 28; % neuroelectrics
+    
 end
 
 if nargin < 4 || isempty(gel_height)
@@ -244,6 +246,39 @@ alpha = ((360-10*theta)/2)*(pi/180);
 h = (L/2)*(1/tan(alpha));
 % For the calculation of the center of electrode coordinates
 
+%% JD enters here
+
+% ask user to select electrode whose coordinates will be specified
+% (overwriting the standard 10/10 coordinates)
+listStr = {D(:).labels};
+usedElecInds=[]; % will store all electrodes in this montage
+elecVoxelInds=[];
+
+while 1 % keep iterating until we get to a break
+    elecIndx = listdlg('PromptString','Select an electrode',...
+        'SelectionMode','single',...
+        'ListString',listStr,'OKstring','Next','CancelString','Done');
+    
+    if isempty(elecIndx)
+        break
+    else
+        
+        usedElecInds=cat(2,usedElecInds,elecIndx);
+        % ask user to select the electrode coordinates by clicking on the
+        % appropriate slice in the image
+        pos=browse_field(P);
+        elecVoxelInds=cat(2,elecVoxelInds,pos(:));
+        %electrode_coord(elecIndx,:)=pos;
+        
+        % determine the template location of the adjusted electrode
+        %u=(pos-line_center)/norm(pos-line_center);
+        
+        % overwrite the template
+        %elec_template(1:3,elecIndx)=u.';
+    end
+end
+%% JD exits here
+
 disp('adjust the cap for optimized position...this will take a while...')
 factor = 1:-0.05:0.5; % Adjusting factor
 CENTER = zeros(length(factor),3);
@@ -269,10 +304,12 @@ for n = 1:length(factor)
     vec2 = repmat(center,size(scalp_surface,1),1)-scalp_surface;
     % vectors connecting center to each point on scalp surface
     idx = zeros(size(vec1,1),1);
-    for j=1:size(vec1,1)
-        temp = dot(repmat(vec1(j,:),size(vec2,1),1),vec2,2)./(repmat(norm(vec1(j,:)),size(vec2,1),1).*sqrt(sum(vec2.^2,2)));
+    for j=1:size(vec1,1) % loop across electrodes
+        temp = dot(repmat(vec1(j,:),size(vec2,1),1),vec2,2)./(repmat(norm(vec1(j,:)),size(vec2,1),1).*sqrt(sum(vec2.^2,2)));  
+        % project jth electrode onto all scalp points
+        % -1 < temp < 1 (it's an arccos)
         [sorttemp,intemp] = sort(temp,'descend');
-        testPts = scalp_surface(intemp(sorttemp> max(sorttemp)*0.99993),:);
+        testPts = scalp_surface(intemp(sorttemp> max(sorttemp)*0.99993),:); % the scalp points most aligned with electrode j
         vecT = repmat(center,size(testPts,1),1)-testPts;
         dist = sqrt(sum(vecT.^2,2));
         idx(j) = intemp(find(dist==max(dist),1,'first'));
@@ -304,6 +341,19 @@ end
 [~,index] = min(F);
 electrode_coord = ELEC_COORD(:,:,index); % exact coordinate for each electrode projected on the scalp surface
 center = CENTER(index,:); % center of electrode coordinates
+
+%% JD reappears
+% manually override the optimization procedure ending at line 343 above
+% put electrode on scalp node closest to marker
+nScalpPoints=size(scalp_surface,1);
+for i=1:numel(usedElecInds)
+    usedElecLoc=elecVoxelInds(:,i);
+    mdists=sum((repmat(usedElecLoc.',nScalpPoints,1)-scalp_surface).^2,2);
+    [~,minind]=min(mdists);
+    % TODO: pick node that is oriented along the local surface
+    electrode_coord(usedElecInds(i),:)=scalp_surface(minind,:);
+end
+%% JD disappears
 
 if ~isempty(back_neck)
     neckCenter = (front_neck+back_neck)/2;
@@ -362,6 +412,8 @@ inde = find(img_edge==255);
 scalp_surface2 = zeros(length(inde),3);
 [scalp_surface2(:,1),scalp_surface2(:,2),scalp_surface2(:,3)] = ind2sub(size(img_edge),inde);
 % Obtain scalp surface points as a matrix (after clean-up)
+
+
 
 disp('calculating gel amount for each electrode...')
 vec1 = repmat(center,size(electrode_coord,1),1)-electrode_coord;
@@ -444,8 +496,8 @@ for i = 1:size(electrode_coord,1)
         elec_coor = floor([elec_X(:) elec_Y(:) elec_Z(:)]);
         elec_coor = unique(elec_coor,'rows'); % clean-up of the coordinates
         
-%         plot3(elec_coor(:,1),elec_coor(:,2),elec_coor(:,3),'.b');
-%         plot3(gel_coor(:,1),gel_coor(:,2),gel_coor(:,3),'.m');
+        %         plot3(elec_coor(:,1),elec_coor(:,2),elec_coor(:,3),'.b');
+        %         plot3(gel_coor(:,1),gel_coor(:,2),gel_coor(:,3),'.m');
         
         gel_C{i} = gel_coor; elec_C{i} = elec_coor; % buffer for coordinates of each electrode and gel point
         %     fprintf('%d out of %d electrodes placed...\n',i,size(electrode_coord,1));

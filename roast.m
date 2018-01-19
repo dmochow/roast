@@ -26,7 +26,7 @@ function roast(subj,recipe)
 % their names in the file 1010electrodes.png under the root directory of ROAST.
 % Note the unit of the injected current is milliampere, and make sure they sum
 % up to 0.
-% 
+%
 % The results are saved as "subjName-date-time_result.mat". And you can
 % look up the corresponding stimulation config you defined in the log file
 % of this subject ("subjName_log"), by using the date-time string.
@@ -48,7 +48,11 @@ if mod(length(recipe),2)~=0
 end
 
 elecName = (recipe(1:2:end-1))';
-fid = fopen('./BioSemi74.loc'); C = textscan(fid,'%d %f %f %s'); fclose(fid);
+try
+    fid = fopen('./BioSemi74.loc'); C = textscan(fid,'%d %f %f %s'); fclose(fid);
+catch
+    fid = fopen('BioSemi74.loc'); C = textscan(fid,'%d %f %f %s'); fclose(fid);
+end
 elec = C{4};
 for i=1:length(elec), elec{i} = strrep(elec{i},'.',''); end
 if ~all(ismember(elecName,elec))
@@ -90,6 +94,16 @@ else
     end
 end
 
+%
+nActive=numel(recipe)/2;
+% TODO: check if is odd, and then throw an error
+for i=nActive:-1:1
+    uniqueTag=cat(2,recipe{2*i-1},uniqueTag);
+    uniqueTag=cat(2,'_',uniqueTag);
+    % TODO: add intensities to uniqueTag
+end
+
+
 fprintf('\n\n');
 disp('======================================================')
 disp(['ROAST ' subj])
@@ -123,11 +137,13 @@ else
     disp('======================================================')
 end
 
-if ~exist([dirname filesep baseFilename '_' uniqueTag '_rnge.mat'],'file')
+%if ~exist([dirname filesep baseFilename '_' uniqueTag '_rnge.mat'],'file')
+if 1 % JD: we always need to enter the code
     disp('======================================================')
     disp('          STEP 3: ELECTRODE PLACEMENT...              ')
     disp('======================================================')
-    [rnge_elec,rnge_gel] = electrode_placement(subj,'1010',[],[],[],elecName,uniqueTag);
+    elecRadius=28;
+    [rnge_elec,rnge_gel] = electrode_placement(subj,'1010',elecRadius,[],[],elecName,uniqueTag);
 else
     disp('======================================================')
     disp('         ELECTRODE ALREADY PLACED, SKIP STEP 3        ')
@@ -135,7 +151,8 @@ else
     load([dirname filesep baseFilename '_' uniqueTag '_rnge.mat'],'rnge_elec','rnge_gel');
 end
 
-if ~exist([dirname filesep baseFilename '_' uniqueTag '.mat'],'file')
+%if ~exist([dirname filesep baseFilename '_' uniqueTag '.mat'],'file')
+if 1 % JD: we need this
     disp('======================================================')
     disp('            STEP 4: MESH GENERATION...                ')
     disp('======================================================')
@@ -147,7 +164,8 @@ else
     load([dirname filesep baseFilename '_' uniqueTag '.mat'],'node','elem','face');
 end
 
-if ~exist([dirname filesep baseFilename '_' uniqueTag '_v.pos'],'file')
+%if ~exist([dirname filesep baseFilename '_' uniqueTag '_v.pos'],'file')
+if 1 % JD: we need this
     disp('======================================================')
     disp('           STEP 5: SOLVING THE MODEL...               ')
     disp('======================================================')
@@ -159,7 +177,8 @@ else
     disp('======================================================')
 end
 
-if ~exist([dirname filesep baseFilename '_' uniqueTag '_result.mat'],'file')
+%if ~exist([dirname filesep baseFilename '_' uniqueTag '_result.mat'],'file')
+if 1 % JD: we need this
     disp('======================================================')
     disp('     STEP 6: SAVING AND VISUALIZING THE RESULTS...    ')
     disp('======================================================')
@@ -170,5 +189,5 @@ else
     disp('  ALL STEPS DONE, LOADING RESULTS FOR VISUALIZATION   ')
     disp('======================================================')
     load([dirname filesep baseFilename '_' uniqueTag '_result.mat'],'vol_all','ef_mag');
-    visualizeRes(subj,node,elem,face,vol_all,ef_mag,injectCurrent,uniqueTag,1);    
+    visualizeRes(subj,node,elem,face,vol_all,ef_mag,injectCurrent,uniqueTag,1);
 end
