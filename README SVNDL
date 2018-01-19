@@ -1,0 +1,44 @@
+
+This repository is strongly adapted from the original ROAST.  Roast is a fully-automated pipeline for tDCS modeling that 
+requires only Matlab.   The modifications are to allow the manual placement of electrodes by clicking on points in the 
+anatomical MRI.  The repository is a work in progress.  This initial commit has been tested on just a couple of
+head/montage configurations, but is a starting point and should be used to report bugs so that continual
+improvements to the code may be made.
+
+IMPORTANT:
+(1) The entire procedure runs based on the markered-MRI.  The presence of the vitamin E markers does not seem to be posing problems
+for the automatic segmentation.  As a result, the electric field can be computed directly in the anatomical which presumably
+has been registered (or can be registered) with the BOLD signals.  
+(2) The modeled electrodes have a radius of 2.82 cm, leading to an area of 25 cm^2.  If this is not correct, please let me know or 
+make the change in the code on your end (Line 145 of roast.m).  The electrodes appear to be quite large when looking at the electric
+field results, but as long as this matches what SVNDL is using, there is no problem.
+
+PROCEDURE
+(1) The main file is callRoastForSvndl.m.  Select the niiFilename variable to equal the full filename of the markered-MRI.  
+The call to Roast specifies the montage.  For example, to simulate a Cz-Oz montage at 1 mA, the code follows as:
+    roast(niiFilename,{'Cz',1,'Oz',-1});
+Note that since we are modeling AC stimulation, the polarity does not matter (i.e., we can interchange +1 and -1 in the above).
+N.B.  In order for Roast to function properly, all scripts must reside in the root Roast directory.  The data can be placed anywhere.
+
+(2) Code execution will halt when the electrode coordinates are ready to be specified by the user.  A matlab dialog will appear
+and prompt you to select which electrodes you want to position.  If you don't manually position any electrodes, the standard 10-10
+positions will be implemented.  Continuing with the Cz-Oz example above, select 'Cz' from the dialog and then click OK.  
+
+(3) A Matlab figure window displaying the anatomical MRI in all 3 orientations will display.   Using the markers to guide you, select the point on the MRI that is ON THE SCALP AND PERPENDICULAR TO THE CZ MARKER IN ALL 3 ORIENTATIONS.  Left-clicking the mouse selects the point.  
+
+(4) When you are satisfied with the selected electrode position, move the crosshairs to "Finalize electrode placement" and left-click the mouse.  
+
+(5) Now select 'Oz' from the electrode list and click 'OK'.
+
+
+(6) Navigate to the scalp point that is perpendicular to the Oz marker in all 3 orientations, and then select 'Finalize electrode placement'.
+
+
+(7) At this point, we have identified the locations of both electrodes in the montage.  Select 'Done' from the Matlab dialog.
+
+
+(8) Roast execution will now continue, taking about 20-30 minutes on a modern CPU to complete.  Figure windows displaying the segmentation, voltage distribution, and electric field distributions will appear.  Matlab data files containing the electric field results will be saved in the directory storing the anatomical MR image used to deploy Roast.  
+
+
+Jacek P. Dmochowski, 01/2018
+
