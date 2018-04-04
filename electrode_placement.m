@@ -254,6 +254,11 @@ listStr = {D(:).labels};
 usedElecInds=[]; % will store all electrodes in this montage
 elecVoxelInds=[];
 
+% figure out the filename of the image that has markers
+[tmp1,tmp2]=fileparts(P);
+prefixUniTag=[uniTag(1:end-19) '_al' '.nii']; % not pretty but it works
+Pmark=fullfile(tmp1,cat(2,tmp2,prefixUniTag));
+
 while 1 % keep iterating until we get to a break
     elecIndx = listdlg('PromptString','Select an electrode',...
         'SelectionMode','single',...
@@ -266,7 +271,7 @@ while 1 % keep iterating until we get to a break
         usedElecInds=cat(2,usedElecInds,elecIndx);
         % ask user to select the electrode coordinates by clicking on the
         % appropriate slice in the image
-        pos=browse_field(P);
+        pos=browse_field(Pmark); % point using the marked MRI, which is coregistered with the anatomy
         elecVoxelInds=cat(2,elecVoxelInds,pos(:));
         %electrode_coord(elecIndx,:)=pos;
         
